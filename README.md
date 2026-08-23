@@ -73,12 +73,17 @@ create it.
 
 This was resolved as a one-time, explicit bootstrap step, not a Rust tool or
 any other custom machinery: `hephaistos-rs/org-state` was created directly
-with `gh repo create`, using flags chosen to match `org-state.tf`'s declared
-values exactly, then this repository's initial commit (including
-`org-state.tf`'s `import` block) was pushed to it. `tofu plan` afterward
-confirmed the result matches the file with no drift — see "Current status."
-From this point on, `org-state` is managed exactly like `edda` and `terra`:
-changes go through `org-state.tf`, reviewed the same way.
+with `gh repo create --public --description "..." --disable-wiki`, topics
+were set with one follow-up `gh api` call (repo creation has no topics
+flag), then this repository's initial commit (including `org-state.tf`'s
+`import` block) was pushed to it. The very first `tofu plan` afterward
+found one mismatch — GitHub stores/returns topics alphabetically, not in
+the order they were submitted — so `org-state.tf`'s topic order was
+corrected to match before considering the adoption done; every other
+declared value matched real GitHub state on the first try. See "Current
+status" for the now-clean result. From this point on, `org-state` is
+managed exactly like `edda` and `terra`: changes go through `org-state.tf`,
+reviewed the same way.
 
 Settings `gh repo create` can't set at creation time (merge methods, commit
 title/message defaults, `delete_branch_on_merge`, `allow_update_branch`)
@@ -180,7 +185,8 @@ support unarchiving via this provider, so archival is treated as the correct
 
 ## Current status
 
-As of 2026-08-23:
+As of 2026-08-23, covering all three managed repositories (`edda`, `terra`,
+`org-state`):
 
 ```text
 tofu fmt -check   → clean (no diff)

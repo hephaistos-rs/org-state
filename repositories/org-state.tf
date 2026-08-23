@@ -4,10 +4,13 @@
 # configuration lives in (nothing exists yet for it to push config to). So
 # unlike edda.tf/terra.tf, this repository was NOT imported after being
 # created out-of-band by a human — it was created directly via `gh repo
-# create`, using flags chosen to match the values below, then imported here
-# so that `tofu plan` is clean from the very first commit. Every value below
-# is real, either passed at creation time or read back from the live
-# repository afterward — none of it is guessed.
+# create` (plus one `gh api` call for topics, which `repo create` can't set),
+# using values chosen to match this file, then imported here. The one thing
+# that didn't match on the first try was topic order — GitHub stores/returns
+# topics alphabetically regardless of submission order — corrected below
+# before treating the adoption as done. Every value below is real, either
+# passed at creation time or read back from the live repository afterward —
+# none of it is guessed. See README.md "Bootstrapping org-state itself".
 #
 # Settings not controllable via `gh repo create` (merge methods, commit
 # title/message defaults, delete_branch_on_merge, allow_update_branch) take
@@ -32,7 +35,7 @@ resource "github_repository" "org_state" {
   description = "Infrastructure as code for the hephaistos-rs GitHub organization's repositories (OpenTofu)."
   visibility  = "public"
 
-  topics = ["opentofu", "infrastructure-as-code", "github"]
+  topics = ["github", "infrastructure-as-code", "opentofu"] # GitHub returns/stores topics alphabetically
 
   has_issues      = true
   has_projects    = true
