@@ -80,6 +80,15 @@ Only apply a plan you generated and reviewed in the same sitting
 (`tofu apply <planfile>` against a saved plan, not a fresh unreviewed
 `tofu apply`), so what gets applied is exactly what was reviewed.
 
+## Adding a new repository
+
+Copy `repo.tf.example` to `<repo-name>.tf` and follow the numbered
+steps in its header comment — it covers both adopting an existing repository
+and creating a brand-new one, and already carries the shared defaults
+(merge-method settings, lifecycle guards) that `edda.tf`/`terra.tf`/
+`org-state.tf` all agree on. Its `.tf.example` extension is deliberate: it
+keeps OpenTofu from ever loading it as live config (see "Structure" above).
+
 ## Adopting a repository that already exists
 
 Use an `import` block, never create a duplicate resource:

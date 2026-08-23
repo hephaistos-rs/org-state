@@ -107,3 +107,13 @@ jobs:
               issue_number: context.issue.number,
               body,
             });
+
+      - name: Fail if plan errored
+        # detailed-exitcode: 0 = no changes, 1 = error, 2 = changes present.
+        # The plan step above always exits 0 itself (set +e) so the comment
+        # step still runs and posts the error output — but an actual `tofu
+        # plan` error must not be allowed to show as a green check.
+        if: steps.plan.outputs.exitcode == '1'
+        run: |
+          echo "::error::tofu plan exited with an error — see the plan output above/in the PR comment."
+          exit 1

@@ -39,6 +39,7 @@ org-state/
 ├── edda.tf                       # desired state of hephaistos-rs/edda
 ├── terra.tf                      # desired state of hephaistos-rs/terra
 ├── org-state.tf                  # desired state of hephaistos-rs/org-state (this repo)
+├── repo.tf.example      # copy-and-fill template for adding a new repository
 ├── providers.tf                  # github provider configuration (no credentials)
 ├── versions.tf                   # pinned OpenTofu + provider versions
 └── .gitignore

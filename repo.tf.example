@@ -1,0 +1,79 @@
+# Desired state of hephaistos-rs/<REPO_NAME>.
+#
+# THIS IS A TEMPLATE, not live config — the .tf.example extension keeps
+# OpenTofu from loading it (the root module only reads files ending in
+# exactly .tf). To add a new repository:
+#
+#   1. cp repo-template.tf.example <repo-name>.tf
+#
+#   2. Per AGENTS.md rule 2, verify every value against the repository's
+#      actual state before filling in the placeholders below — don't guess,
+#      don't copy defaults blindly:
+#        gh api repos/hephaistos-rs/<repo-name> --jq \
+#          '{visibility, topics, description, has_wiki, has_issues, has_projects, has_discussions}'
+#
+#   3. If the repository does NOT exist yet, decide the values instead of
+#      reading them, and DELETE both `import` blocks below — OpenTofu can
+#      create it directly. (org-state.tf is the one exception to this, see
+#      its own file comment for why.)
+#
+#   4. Decide whether this repo carries the `hephaistos-rs` topic — see
+#      AGENTS.md "Topics convention" (software products: yes; infra
+#      repositories describing the org itself, like this one: no).
+#
+#   5. Rename every `<REPO_NAME>` below (the two resource labels) and every
+#      `<repo-name>` (the two import IDs + the repository name) to match.
+#
+#   6. tofu fmt -recursive && tofu validate && tofu plan — read the full
+#      plan output, not just the summary line, before ever applying.
+
+import {
+  to = github_repository.<REPO_NAME>
+  id = "<repo-name>"
+}
+
+resource "github_repository" "<REPO_NAME>" {
+  name        = "<repo-name>"
+  description = "<one-line description>"
+  visibility  = "<public|private>"
+
+  topics = [] # keep alphabetical — GitHub returns/stores topics this way regardless of submission order
+
+  has_issues      = true
+  has_projects    = true
+  has_wiki        = false # set true only if this repo actually uses the wiki
+  has_discussions = false
+
+  allow_forking               = true # public repos are always forkable; matches edda/terra convention
+  web_commit_signoff_required = false
+
+  allow_merge_commit = true
+  allow_squash_merge = true
+  allow_rebase_merge = true
+  allow_auto_merge   = false
+
+  squash_merge_commit_title   = "COMMIT_OR_PR_TITLE"
+  squash_merge_commit_message = "COMMIT_MESSAGES"
+  merge_commit_title          = "MERGE_MESSAGE"
+  merge_commit_message        = "PR_TITLE"
+
+  delete_branch_on_merge = false
+  allow_update_branch    = false
+
+  archived           = false
+  archive_on_destroy = true # if this resource is ever destroyed, archive rather than delete
+
+  lifecycle {
+    prevent_destroy = true # see README.md "Lifecycle safety policy" before removing
+  }
+}
+
+import {
+  to = github_branch_default.<REPO_NAME>
+  id = "<repo-name>"
+}
+
+resource "github_branch_default" "<REPO_NAME>" {
+  repository = github_repository.<REPO_NAME>.name
+  branch     = "main"
+}
