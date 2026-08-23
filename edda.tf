@@ -1,12 +1,9 @@
 # Desired state of hephaistos-rs/edda.
 #
-# edda already existed on GitHub before this repository was created. The
-# import block below brought it under OpenTofu management without creating,
-# deleting, or modifying it — every value below was captured from edda's
-# live GitHub settings (via an authenticated `gh api` read) on 2026-08-23,
-# not guessed or copied from a template. `tofu plan` must show no changes
-# against this file; if it doesn't, fix this file to match GitHub, not the
-# other way around.
+# edda already exists; it's imported here, not created, so these values
+# describe its actual current settings rather than a template. If `tofu
+# plan` ever shows a diff against this file, fix the file to match GitHub —
+# not the other way around.
 
 import {
   to = github_repository.edda

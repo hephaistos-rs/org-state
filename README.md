@@ -36,32 +36,44 @@ real need shows up.
 ```text
 org-state/
 ├── .github/workflows/plan.yml   # fmt/validate/plan CI (see below) — no apply yet
-├── repositories/
-│   ├── edda.tf                   # desired state of hephaistos-rs/edda
-│   ├── terra.tf                  # desired state of hephaistos-rs/terra
-│   └── org-state.tf              # desired state of hephaistos-rs/org-state (this repo)
+├── edda.tf                       # desired state of hephaistos-rs/edda
+├── terra.tf                      # desired state of hephaistos-rs/terra
+├── org-state.tf                  # desired state of hephaistos-rs/org-state (this repo)
 ├── providers.tf                  # github provider configuration (no credentials)
 ├── versions.tf                   # pinned OpenTofu + provider versions
 └── .gitignore
 ```
 
-One file per repository under `repositories/` — opening `edda.tf` tells you
-everything this project declares about `hephaistos-rs/edda`, nothing more.
-There's no module: with two repositories, a module would be pure indirection.
-Add one when repeating the same block for a third or fourth repository
+One file per repository, all at the repository root — opening `edda.tf`
+tells you everything this project declares about `hephaistos-rs/edda`,
+nothing more. There's no module: with three repositories, a module would be
+pure indirection. Add one when repeating the same block for a repository
 actually gets tedious, not before.
+
+These files are flat at the root **on purpose, not by accident**: OpenTofu's
+root module only loads `.tf` files that sit directly in the working
+directory — it does not recurse into subdirectories unless they're declared
+as a module. An earlier version of this repository grouped these files
+under a `repositories/` subdirectory, which meant OpenTofu silently loaded
+zero resources from them; every `tofu plan` run reported "No changes"
+because there was nothing loaded to compare, not because reality matched
+the files. That was caught and fixed before anything was applied — see
+"Known issues found during setup" below for the full account, including a
+second, unrelated authoring mistake it also caught.
 
 ## Existing repository adoption
 
+`edda`, `terra`, and `org-state` are all now managed by this repository.
 `edda` and `terra` already existed on GitHub before this repository did.
-They were **imported**, not created: each `repositories/*.tf` file starts
-with an `import` block that brought the existing repository into OpenTofu's
-state without creating, deleting, or modifying it. Every attribute value in
-those files was captured from the repositories' actual live GitHub settings
-(via an authenticated read), not guessed or copied from a template.
+They were **imported**, not created: each file starts with an `import`
+block that brought the existing repository into OpenTofu's state without
+creating or deleting it. Every attribute value was captured from the
+repositories' actual live GitHub settings (via an authenticated read), not
+guessed or copied from a template — with one deliberate, explicitly
+requested exception: see "Known issues found during setup."
 
 The adoption is only considered successful because `tofu plan` reports
-**no changes** against both files — see "Current status" below.
+**no changes** against all three files — see "Current status" below.
 
 ### Bootstrapping org-state itself
 
@@ -124,9 +136,9 @@ laptop — state is never uploaded to, or read from, GitHub Actions. This
 still produces a **real, meaningful plan**: every resource here has a
 stable, human-chosen import ID (the repository name), so each `import`
 block can be re-resolved against live GitHub on every run, with no state to
-carry over. CI's plan is therefore always a comparison of `repositories/*.tf`
-against actual current GitHub — exactly as trustworthy as a local plan,
-just computed independently each time rather than reused.
+carry over. CI's plan is therefore always a comparison of the root-level
+`.tf` files against actual current GitHub — exactly as trustworthy as a
+local plan, just computed independently each time rather than reused.
 
 What this arrangement genuinely can't do — the actual limitation, not just
 "no state file" — is provide locking or any cross-run coordination: nothing
@@ -148,7 +160,7 @@ tofu apply     # apply an approved plan
 ```
 
 Changes should normally go through a pull request: open a PR editing the
-relevant `repositories/*.tf` file, let CI post the plan, get it reviewed,
+relevant repository's `.tf` file, let CI post the plan, get it reviewed,
 then merge. There is currently no automated `apply` step (see "Roadmap")
 — applying a change is a manual, deliberate action by whoever is maintaining
 this repository, run locally with `tofu apply` after reviewing the plan.
@@ -194,17 +206,23 @@ tofu validate     → Success! The configuration is valid.
 tofu plan         → No changes. Your infrastructure matches the configuration.
 ```
 
+This result is from a real plan against real GitHub state, evaluated after
+fixing the subdirectory issue described below — resource counts were
+checked directly (6 resources: one `github_repository` and one
+`github_branch_default` per repository), not just the summary line.
+
 ### State
 
-OpenTofu state is currently stored **locally**, as a temporary bootstrap
-arrangement — there is one operator, so there is nothing to coordinate. The
-state file is intentionally excluded from version control (`.gitignore`
-covers `*.tfstate` and `*.tfstate.*`) and is never pushed to GitHub. A
-shared remote backend will be introduced when collaborative operation
-actually requires it — see "Roadmap." Until then, every `tofu plan`/`tofu
-apply` run re-imports `edda`, `terra`, and `org-state` from live GitHub if
-no local state file is present, which is expected and fine (see "What CI
-can and can't do with local-only state" above).
+OpenTofu state is currently stored **locally** (`terraform.tfstate`), as a
+temporary bootstrap arrangement — there is one operator, so there is
+nothing to coordinate. The state file is intentionally excluded from
+version control (`.gitignore` covers `*.tfstate` and `*.tfstate.*`) and is
+never pushed to GitHub. A shared remote backend will be introduced when
+collaborative operation actually requires it — see "Roadmap." A local
+state file now exists on whichever machine last ran `tofu apply`; anyone
+else (or CI) has none, and will re-import all three repositories from live
+GitHub the next time they run `tofu plan`/`tofu apply` — expected and fine
+(see "What CI can and can't do with local-only state" above).
 
 ## Roadmap
 
@@ -221,12 +239,35 @@ need:
 4. **Broader repository settings** as real needs come up (e.g. GitHub Pages
    configuration, security-and-analysis toggles) — not added speculatively.
 
-## Known gap
+## Known issues found during setup
 
-`terra` currently has no topics on GitHub — notably, it's missing the
-`hephaistos-rs` topic that `.github`'s `update-projects` workflow uses to
-discover organization projects for the profile README. `repositories/terra.tf`
-declares `topics = []` to match terra's actual current state rather than
-silently "fixing" this as part of the adoption commit (this repo's job right
-now is describing reality, not redesigning it). Adding the topic is a good
-candidate for a small, separate, deliberate follow-up PR.
+Two real mistakes were made and caught while first standing this repository
+up, before anything was applied to GitHub. Recorded here rather than
+quietly fixed, since both are the kind of thing worth a future maintainer
+knowing about:
+
+1. **All three `.tf` files were originally under a `repositories/`
+   subdirectory.** OpenTofu's root module doesn't load `.tf` files from
+   subdirectories — only ones directly in the working directory. Every
+   `tofu plan` run reported "No changes" the entire time, but it was
+   comparing an empty configuration to nothing; it was never actually
+   evaluating `edda`, `terra`, or `org-state` against live GitHub.
+   Confirmed by deliberately introducing a syntax error into one of the
+   files and observing `tofu validate` still report success — proof the
+   file wasn't being read at all. Fixed by moving the files to the
+   repository root (see "Repository structure").
+2. **`terra.tf` initially declared `visibility = "public"`**, despite the
+   authenticated read used to write it showing `terra` as `private` at the
+   time. A real authoring mistake, unrelated to the subdirectory issue —
+   it went uncaught for the same reason: the file wasn't actually being
+   evaluated. Had it been applied as originally written, it would have made
+   a private repository public by accident. Caught during the same
+   investigation, before any apply ran.
+
+Separately, and not a mistake: `terra` originally had no topics on GitHub,
+notably missing the `hephaistos-rs` topic that `.github`'s
+`update-projects` workflow uses to discover organization projects for the
+profile README. The org's operator explicitly requested `terra` be made
+public with that topic restored; `terra.tf` was updated accordingly and
+`tofu apply` made that real, intentional change to GitHub — see git log for
+the corresponding commits.

@@ -16,5 +16,7 @@ crash.*.log
 !*.tfvars.example
 !*.tfvars.json.example
 
-# Plan output files (may embed state/secret values).
+# Plan output files (may embed state/secret values). *.plan covers
+# `-out=name.plan`, which doesn't match the more common *.tfplan.
 *.tfplan
+*.plan

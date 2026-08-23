@@ -1,21 +1,8 @@
 # Desired state of hephaistos-rs/terra.
 #
-# terra already existed on GitHub before this repository was created. The
-# import block below brought it under OpenTofu management without creating,
-# deleting, or modifying it — every value below was captured from terra's
-# live GitHub settings (via an authenticated `gh api` read) on 2026-08-23,
-# not guessed or copied from a template. `tofu plan` must show no changes
-# against this file; if it doesn't, fix this file to match GitHub, not the
-# other way around.
-#
-# NOTE: terra currently has no topics — notably it is missing the
-# `hephaistos-rs` topic that .github's update-projects workflow uses to
-# discover org projects for the profile README (see .github/.github/workflows
-# /update-projects.yml). topics = [] below matches terra's actual current
-# state; this is intentionally NOT "fixed" here, because doing so would make
-# this adoption commit change real GitHub state instead of just describing
-# it. Adding the topic is a good candidate for a small, separate, deliberate
-# follow-up PR once this baseline is merged.
+# terra already exists; it's imported here, not created. It's public and
+# carries the `hephaistos-rs` topic so .github's update-projects workflow
+# picks it up for the org profile's project showcase, same as edda.
 
 import {
   to = github_repository.terra
@@ -27,14 +14,14 @@ resource "github_repository" "terra" {
   description = "Terra, let your software take root"
   visibility  = "public"
 
-  topics = [] # see NOTE above — does not currently carry the hephaistos-rs topic
+  topics = ["hephaistos-rs"]
 
   has_issues      = true
   has_projects    = true
   has_wiki        = false
   has_discussions = false
 
-  allow_forking               = false
+  allow_forking               = true # public repos are always forkable; matches edda's convention
   web_commit_signoff_required = false
 
   allow_merge_commit = true
