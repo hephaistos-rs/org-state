@@ -1,0 +1,109 @@
+name: IaC validate & plan
+
+# Initial CI for org-state. This is deliberately minimal:
+#   - fmt/validate always runs, needs no credentials, safe on forked PRs.
+#   - plan runs only for non-fork PRs, using a read-scoped credential.
+#   - there is no apply job yet. Applying changes is a later phase, once
+#     this repo has a real reviewed track record and a remote state backend.
+#     See README.md "Roadmap".
+
+on:
+  pull_request:
+    paths:
+      - "**/*.tf"
+      - ".github/workflows/plan.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: iac-plan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fmt-validate:
+    name: fmt & validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: "1.12.6"
+
+      - name: tofu fmt -check
+        run: tofu fmt -check -recursive -diff
+
+      - name: tofu init (no backend, no credentials — provider download only)
+        run: tofu init -input=false -backend=false
+
+      - name: tofu validate
+        run: tofu validate -no-color
+
+  plan:
+    name: plan (same-repo PRs only)
+    needs: fmt-validate
+    runs-on: ubuntu-latest
+    # A PR from a fork must never reach this job: it needs a real read
+    # credential for the org's repos (including private ones), and that
+    # credential must never be reachable from a fork's workflow run.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      contents: read
+      pull-requests: write # to post the plan as a PR comment
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: "1.12.6"
+
+      - name: tofu init
+        run: tofu init -input=false
+
+      - name: tofu plan
+        id: plan
+        env:
+          # The `integrations/github` provider reads its token from the
+          # GITHUB_TOKEN environment variable by default. This is NOT the
+          # Actions-provided `secrets.GITHUB_TOKEN` (that token only has
+          # access to this one repository, not the rest of the org, and
+          # can't read private repos like terra) — it's a separate,
+          # read-scoped credential a maintainer must add as the repo
+          # secret GH_READ_TOKEN (a fine-grained PAT or GitHub App
+          # installation token limited to org repo metadata:read) before
+          # this job produces real output. See README.md "Authentication".
+          GITHUB_TOKEN: ${{ secrets.GH_READ_TOKEN }}
+        run: |
+          set +e
+          tofu plan -no-color -input=false -detailed-exitcode > plan.txt
+          echo "exitcode=$?" >> "$GITHUB_OUTPUT"
+          cat plan.txt
+
+      - name: Comment plan on PR
+        uses: actions/github-script@d746ffe35508b1917358783b479e04febd2b8f71 # v9.0.0
+        with:
+          script: |
+            const fs = require("fs");
+            const plan = fs.readFileSync("plan.txt", "utf8").slice(0, 60000);
+            const body = [
+              "#### OpenTofu plan",
+              "<details><summary>Show plan output</summary>",
+              "",
+              "```",
+              plan,
+              "```",
+              "</details>",
+            ].join("\n");
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

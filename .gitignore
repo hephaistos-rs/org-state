@@ -1,0 +1,20 @@
+# OpenTofu / Terraform local state and working files.
+# State is local-only for now (see README) and must never be committed:
+# it can contain repository IDs and other data we don't want tracked in git,
+# and committing it would conflict with anyone else running tofu locally.
+#
+# .terraform.lock.hcl is NOT ignored — commit it, it pins provider checksums.
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+
+# Variable files can carry secrets; only *.tfvars.example is safe to commit.
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+
+# Plan output files (may embed state/secret values).
+*.tfplan
