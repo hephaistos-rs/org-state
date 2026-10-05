@@ -4,7 +4,7 @@
 # OpenTofu from loading it (the root module only reads files ending in
 # exactly .tf). To add a new repository:
 #
-#   1. cp repo-template.tf.example <repo-name>.tf
+#   1. cp repo.tf.example <repo-name>.tf
 #
 #   2. Per AGENTS.md rule 2, verify every value against the repository's
 #      actual state before filling in the placeholders below — don't guess,
@@ -44,7 +44,7 @@ resource "github_repository" "<REPO_NAME>" {
   has_wiki        = false # set true only if this repo actually uses the wiki
   has_discussions = false
 
-  allow_forking               = true # public repos are always forkable; matches edda/terra convention
+  allow_forking               = true # public repos are always forkable; matches the other repositories
   web_commit_signoff_required = false
 
   allow_merge_commit = true

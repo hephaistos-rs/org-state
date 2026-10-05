@@ -29,13 +29,14 @@ real, public infrastructure other people depend on. Treat it accordingly.
    environment (`GITHUB_TOKEN`) or an already-authenticated `gh` CLI —
    never hardcoded.
 5. **This repo never touches other repos' working trees.** Don't edit files
-   in `edda`/`terra`'s own clones from here — this repo only describes
+   in other repositories' own clones from here — this repo only describes
    their GitHub *settings*, never their source code.
 
 ## Structure: flat `.tf` files at the root, no subdirectories
 
-Every repository gets one file at the repo root: `edda.tf`, `terra.tf`,
-`org-state.tf`, and so on. **Do not move these into a subdirectory** (e.g.
+Every repository gets one file at the repo root: `klotho.tf`, `lemnos.tf`,
+`org-state.tf`, and so on. The exception is `.github`, declared in
+`dot-github.tf`: OpenTofu ignores files whose names start with a dot. **Do not move these into a subdirectory** (e.g.
 `repositories/`), even for organization — OpenTofu's root module only loads
 `.tf` files that sit directly in the working directory. It does not
 recurse into subdirectories unless one is declared as a module with a
@@ -85,8 +86,8 @@ Only apply a plan you generated and reviewed in the same sitting
 Copy `repo.tf.example` to `<repo-name>.tf` and follow the numbered
 steps in its header comment — it covers both adopting an existing repository
 and creating a brand-new one, and already carries the shared defaults
-(merge-method settings, lifecycle guards) that `edda.tf`/`terra.tf`/
-`org-state.tf` all agree on. Its `.tf.example` extension is deliberate: it
+(merge-method settings, lifecycle guards) that the existing
+`.tf` files all agree on. Its `.tf.example` extension is deliberate: it
 keeps OpenTofu from ever loading it as live config (see "Structure" above).
 
 ## Adopting a repository that already exists

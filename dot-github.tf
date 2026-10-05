@@ -1,21 +1,21 @@
-# Desired state of hephaistos-rs/edda.
+# Desired state of hephaistos-rs/.github.
 #
-# edda already exists; it's imported here, not created, so these values
-# describe its actual current settings rather than a template. If `tofu
-# plan` ever shows a diff against this file, fix the file to match GitHub —
-# not the other way around.
+# Imported, not created: values were read from the live repository.
+#
+# The file is named dot-github.tf, not .github.tf: OpenTofu skips files
+# whose names start with a dot, so .github.tf would silently never load.
 
 import {
-  to = github_repository.edda
-  id = "edda"
+  to = github_repository.dot_github
+  id = ".github"
 }
 
-resource "github_repository" "edda" {
-  name        = "edda"
-  description = "Edda, the story behind your code."
+resource "github_repository" "dot_github" {
+  name        = ".github"
+  description = ""
   visibility  = "public"
 
-  topics = ["git", "hephaistos-rs", "hosting"]
+  topics = []
 
   has_issues      = true
   has_projects    = true
@@ -47,11 +47,11 @@ resource "github_repository" "edda" {
 }
 
 import {
-  to = github_branch_default.edda
-  id = "edda"
+  to = github_branch_default.dot_github
+  id = ".github"
 }
 
-resource "github_branch_default" "edda" {
-  repository = github_repository.edda.name
+resource "github_branch_default" "dot_github" {
+  repository = github_repository.dot_github.name
   branch     = "main"
 }

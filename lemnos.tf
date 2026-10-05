@@ -1,27 +1,25 @@
-# Desired state of hephaistos-rs/terra.
+# Desired state of hephaistos-rs/lemnos.
 #
-# terra already exists; it's imported here, not created. It's public and
-# carries the `hephaistos-rs` topic so .github's update-projects workflow
-# picks it up for the org profile's project showcase, same as edda.
+# Imported, not created: values were read from the live repository.
 
 import {
-  to = github_repository.terra
-  id = "terra"
+  to = github_repository.lemnos
+  id = "lemnos"
 }
 
-resource "github_repository" "terra" {
-  name        = "terra"
-  description = "Terra, let your software take root"
+resource "github_repository" "lemnos" {
+  name        = "lemnos"
+  description = ""
   visibility  = "public"
 
-  topics = ["hephaistos-rs"]
+  topics = []
 
   has_issues      = true
   has_projects    = true
-  has_wiki        = false
+  has_wiki        = true
   has_discussions = false
 
-  allow_forking               = true # public repos are always forkable; matches edda's convention
+  allow_forking               = true
   web_commit_signoff_required = false
 
   allow_merge_commit = true
@@ -46,11 +44,11 @@ resource "github_repository" "terra" {
 }
 
 import {
-  to = github_branch_default.terra
-  id = "terra"
+  to = github_branch_default.lemnos
+  id = "lemnos"
 }
 
-resource "github_branch_default" "terra" {
-  repository = github_repository.terra.name
+resource "github_branch_default" "lemnos" {
+  repository = github_repository.lemnos.name
   branch     = "main"
 }

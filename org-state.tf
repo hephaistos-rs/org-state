@@ -1,12 +1,12 @@
 # Desired state of hephaistos-rs/org-state — this repository.
 #
 # OpenTofu can't create the repository its own config lives in, so unlike
-# edda/terra this one was created directly via `gh repo create` and then
+# the other repositories this one was created directly via `gh repo create` and then
 # imported here — see README.md "Bootstrapping org-state itself".
 #
 # Merge-method settings (allow_merge_commit, commit title/message defaults,
 # delete_branch_on_merge, allow_update_branch) match GitHub's/the org's
-# standard defaults, same as edda and terra, rather than inventing
+# standard defaults, same as the other repositories, rather than inventing
 # different values.
 #
 # Topics deliberately do NOT include `hephaistos-rs`: that topic drives

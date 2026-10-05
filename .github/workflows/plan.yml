@@ -74,7 +74,7 @@ jobs:
           # GITHUB_TOKEN environment variable by default. This is NOT the
           # Actions-provided `secrets.GITHUB_TOKEN` (that token only has
           # access to this one repository, not the rest of the org, and
-          # can't read private repos like terra) — it's a separate,
+          # can't read private repos) — it's a separate,
           # read-scoped credential a maintainer must add as the repo
           # secret GH_READ_TOKEN (a fine-grained PAT or GitHub App
           # installation token limited to org repo metadata:read) before

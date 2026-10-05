@@ -37,8 +37,12 @@ real need shows up.
 ```text
 org-state/
 ├── .github/workflows/plan.yml   # fmt/validate/plan CI (see below) — no apply yet
-├── edda.tf                       # desired state of hephaistos-rs/edda
-├── terra.tf                      # desired state of hephaistos-rs/terra
+├── atropos.tf                    # desired state of hephaistos-rs/atropos
+├── dot-github.tf                 # desired state of hephaistos-rs/.github (see below for the name)
+├── kedalion.tf                   # desired state of hephaistos-rs/kedalion
+├── klotho.tf                     # desired state of hephaistos-rs/klotho
+├── lachesis.tf                   # desired state of hephaistos-rs/lachesis
+├── lemnos.tf                     # desired state of hephaistos-rs/lemnos
 ├── org-state.tf                  # desired state of hephaistos-rs/org-state (this repo)
 ├── repo.tf.example      # copy-and-fill template for adding a new repository
 ├── providers.tf                  # github provider configuration (no credentials)
@@ -46,10 +50,12 @@ org-state/
 └── .gitignore
 ```
 
-One file per repository, all at the repository root — opening `edda.tf`
-tells you everything this project declares about `hephaistos-rs/edda`,
-nothing more. There's no module: with three repositories, a module would be
-pure indirection. Add one when repeating the same block for a repository
+One file per repository, all at the repository root — opening `klotho.tf`
+tells you everything this project declares about `hephaistos-rs/klotho`,
+nothing more. The one naming exception is `.github`, declared in
+`dot-github.tf`: OpenTofu ignores files whose names start with a dot, so a
+`.github.tf` would silently never load. There's no module: with a handful
+of repositories, a module would be pure indirection. Add one when repeating the same block for a repository
 actually gets tedious, not before.
 
 These files are flat at the root **on purpose, not by accident**: OpenTofu's
@@ -65,8 +71,11 @@ second, unrelated authoring mistake it also caught.
 
 ## Existing repository adoption
 
-`edda`, `terra`, and `org-state` are all now managed by this repository.
-`edda` and `terra` already existed on GitHub before this repository did.
+Every repository in the organization is managed by this repository:
+`klotho`, `lachesis`, `atropos`, `lemnos`, `kedalion`, `.github`, and
+`org-state`. (`edda` and `terra`, the first two repositories adopted here,
+have since been deleted from GitHub and their files removed.) All of them
+except `org-state` already existed on GitHub before being added here.
 They were **imported**, not created: each file starts with an `import`
 block that brought the existing repository into OpenTofu's state without
 creating or deleting it. Every attribute value was captured from the
@@ -75,7 +84,7 @@ guessed or copied from a template — with one deliberate, explicitly
 requested exception: see "Known issues found during setup."
 
 The adoption is only considered successful because `tofu plan` reports
-**no changes** against all three files — see "Current status" below.
+**no real (GitHub-visible) changes** against these files — see "Current status" below.
 
 ### Bootstrapping org-state itself
 
@@ -96,13 +105,13 @@ the order they were submitted — so `org-state.tf`'s topic order was
 corrected to match before considering the adoption done; every other
 declared value matched real GitHub state on the first try. See "Current
 status" for the now-clean result. From this point on, `org-state` is
-managed exactly like `edda` and `terra`: changes go through `org-state.tf`,
+managed exactly like the other repositories: changes go through `org-state.tf`,
 reviewed the same way.
 
 Settings `gh repo create` can't set at creation time (merge methods, commit
 title/message defaults, `delete_branch_on_merge`, `allow_update_branch`)
 came out as GitHub's standard defaults — the same defaults `edda` and
-`terra` both already carry, confirming they're account-wide defaults rather
+`terra` both carried at the time, confirming they're account-wide defaults rather
 than a per-repo choice someone made. `org-state.tf` declares those same
 values to match, rather than inventing different ones.
 
@@ -120,8 +129,8 @@ this order (see the
 4. anonymous, read-only access
 
 For local development, having `gh` installed and authenticated
-(`gh auth login`, needs at least the `repo` scope to read `terra`, which is
-private) is enough — nothing else to configure.
+(`gh auth login`, with at least the `repo` scope so private repositories
+can be read if any are added) is enough — nothing else to configure.
 
 In CI, the `fmt`/`validate` job needs no credentials at all. The `plan` job
 needs a maintainer to add a repo secret named `GH_READ_TOKEN` — a
@@ -199,19 +208,21 @@ support unarchiving via this provider, so archival is treated as the correct
 
 ## Current status
 
-As of 2026-08-23, covering all three managed repositories (`edda`, `terra`,
-`org-state`):
+As of 2026-10-05, covering all seven managed repositories, from a fresh
+checkout with no local state:
 
 ```text
 tofu fmt -check   → clean (no diff)
 tofu validate     → Success! The configuration is valid.
-tofu plan         → No changes. Your infrastructure matches the configuration.
+tofu plan         → 14 to import, 0 to add, 7 to change, 0 to destroy.
 ```
 
-This result is from a real plan against real GitHub state, evaluated after
-fixing the subdirectory issue described below — resource counts were
-checked directly (6 resources: one `github_repository` and one
-`github_branch_default` per repository), not just the summary line.
+The 7 "changes" are only the client-side bookkeeping fields
+`archive_on_destroy` and `ignore_vulnerability_alerts_during_read` on each
+`github_repository` (see AGENTS.md); no GitHub-visible attribute differs.
+Resource counts were checked directly with `tofu show -json` (14
+resources: one `github_repository` and one `github_branch_default` per
+repository), not just the summary line.
 
 ### State
 
@@ -222,7 +233,7 @@ version control (`.gitignore` covers `*.tfstate` and `*.tfstate.*`) and is
 never pushed to GitHub. A shared remote backend will be introduced when
 collaborative operation actually requires it — see "Roadmap." A local
 state file now exists on whichever machine last ran `tofu apply`; anyone
-else (or CI) has none, and will re-import all three repositories from live
+else (or CI) has none, and will re-import every repository from live
 GitHub the next time they run `tofu plan`/`tofu apply` — expected and fine
 (see "What CI can and can't do with local-only state" above).
 
@@ -273,3 +284,8 @@ profile README. The org's operator explicitly requested `terra` be made
 public with that topic restored; `terra.tf` was updated accordingly and
 `tofu apply` made that real, intentional change to GitHub — see git log for
 the corresponding commits.
+
+`edda` and `terra` were later deleted from GitHub, and on 2026-10-05
+`edda.tf` and `terra.tf` were removed. Because the repositories no longer
+exist, the provider drops them from any existing local state on refresh,
+so removing their resource blocks doesn't trip `prevent_destroy`.
