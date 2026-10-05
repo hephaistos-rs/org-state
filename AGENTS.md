@@ -136,10 +136,13 @@ which category it's in rather than copying topics from the nearest example.
 
 ## Out of scope
 
-Don't add configuration for: teams, collaborators, org-wide permissions or
-settings, GitHub Apps/installations, billing, or general org governance.
-This repo manages repository metadata, each repository's `default-branch`
-ruleset, and org-state's own `apply` environment. `scripts/check-allowlist.sh`
+Don't add configuration for: org-wide settings, GitHub Apps/installations,
+Actions secrets or variables, billing, or general org governance. This repo
+manages repository metadata, each repository's `default-branch` ruleset,
+org-state's own `apply` environment, and people: org members, teams and
+collaborators. Never add or change an access grant (especially
+`role = "admin"` or `admin`/`maintain` permission) unless a human asked for
+that exact grant, and name it in the PR description. `scripts/check-allowlist.sh`
 enforces this, and widening its allowlist is a human decision, made in its
 own PR. If a real
 need for one of these comes up, that's a decision for a human to make

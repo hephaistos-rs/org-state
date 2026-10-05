@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Fails if the configuration uses anything beyond what org-state manages.
 #
-# CI applies every merge to main, so a PR that slipped in, say, a
-# github_repository_collaborator with admin rights would grant it. Two modes:
+# CI applies every merge to main with a token that can change repository
+# settings and org membership. This keeps what a merged PR can do to the
+# resources this repo is meant to manage: no other resource types (Actions
+# secrets, org settings, ...), no data sources, no other providers, no
+# modules. Who gets access is decided by review, not by this script. Two modes:
 #
 #   check-allowlist.sh            scan the source; runs before `tofu init`,
 #                                 so a rejected config never executes
@@ -12,7 +15,7 @@
 set -euo pipefail
 shopt -s nullglob
 
-allowed_resources='github_repository|github_branch_default|github_repository_ruleset|github_repository_environment|github_repository_environment_deployment_policy'
+allowed_resources='github_membership|github_team|github_team_membership|github_team_repository|github_repository_collaborator|github_repository|github_branch_default|github_repository_ruleset|github_repository_environment|github_repository_environment_deployment_policy'
 
 if [ $# -eq 1 ]; then
   json=$(tofu show -json "$1")

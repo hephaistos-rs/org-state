@@ -27,12 +27,15 @@ Currently, per-repository configuration:
   branch directly, and others' PRs need an org owner's approval (see
   "Branch protection" below)
 - `org-state`'s own `apply` environment, which holds CI's write credentials
+- people: org members (`members.tf`), teams and their repository access
+  (`teams.tf`), and single-repository collaborators (in that repository's
+  file); see "People and access" below
 
 ## What this does not manage
 
-Out of scope for now: organization-wide permissions and settings, team
-membership, collaborators, billing, GitHub Apps/installations, and general
-org governance. CI enforces this: `scripts/check-allowlist.sh` rejects any
+Out of scope for now: organization-wide settings, billing, GitHub
+Apps/installations, Actions secrets and variables, and general org
+governance. CI enforces this: `scripts/check-allowlist.sh` rejects any
 resource type outside the ones listed above. None of these are needed for the current goal
 (reproducible repository metadata), and adding them isn't planned unless a
 real need shows up.
@@ -45,6 +48,8 @@ org-state/
 ├── .github/workflows/plan.yml   # PR checks: allowlist, fmt/validate, plan
 ├── .github/workflows/apply.yml  # applies main to GitHub after every merge
 ├── backend.tf                    # remote state in Cloudflare R2
+├── members.tf                    # org members and their roles
+├── teams.tf                      # teams, team members, team repository access
 ├── scripts/check-allowlist.sh    # rejects resource types this repo doesn't manage
 ├── atropos.tf                    # desired state of hephaistos-rs/atropos
 ├── dot-github.tf                 # desired state of hephaistos-rs/.github (see below for the name)
@@ -150,15 +155,15 @@ these secrets (none of them can be the Actions-provided
 
 | Secret | Where | What |
 |---|---|---|
-| `GH_READ_TOKEN` | repo | fine-grained PAT, all org repos: Administration **read**, Metadata read |
+| `GH_READ_TOKEN` | repo | fine-grained PAT, all org repos: Administration **read**, Metadata read; org: Members **read** |
 | `R2_ENDPOINT` | repo | `https://<account-id>.r2.cloudflarestorage.com` |
 | `R2_READ_ACCESS_KEY_ID`, `R2_READ_SECRET_ACCESS_KEY` | repo | R2 token, **Object Read** on the state bucket |
-| `GH_APPLY_TOKEN` | `apply` environment | fine-grained PAT, all org repos: Administration **read & write**, Metadata read |
+| `GH_APPLY_TOKEN` | `apply` environment | fine-grained PAT, all org repos: Administration **read & write**, Metadata read; org: Members **read & write** |
 | `R2_WRITE_ACCESS_KEY_ID`, `R2_WRITE_SECRET_ACCESS_KEY` | `apply` environment | R2 token, **Object Read & Write** on the state bucket |
 
-Neither PAT gets any organization permissions, so no configuration, however
-it's edited, can change org owners or members. The write credentials are
-environment secrets, and only `main` can deploy to the `apply` environment,
+The apply token can change who has access, org owners included, so the
+review on every PR is what decides access (see "People and access"). The
+write credentials are environment secrets, and only `main` can deploy to the `apply` environment,
 so a PR branch can't reach them even by editing a workflow.
 
 ### Branch protection
@@ -176,6 +181,22 @@ On `org-state`, both CI checks must also pass, and only runs of the GitHub
 Actions app count (`integration_id = 15368`). `.github` is the exception:
 its ruleset only blocks force-pushes and deletion, because its
 `update-projects` workflow commits the profile README straight to `main`.
+
+### People and access
+
+Members, teams and collaborators are managed here like everything else:
+open a PR, merge, and CI applies it. Adding someone to `members.tf` sends
+an org invitation; they're a member once they accept.
+
+Admin grants go through PRs too, so review them as what they are. An org
+owner (`role = "admin"` in `members.tf`) gets the org-owner bypass on
+every ruleset: they can merge their own PRs without approval, and change
+or remove rulesets in the GitHub UI. Nothing in this repository can limit
+an org owner, so only make someone one if you'd trust them with the whole
+org.
+
+The founding owner's own membership has `prevent_destroy`, so deleting it
+from `members.tf` gives a blocked plan, not a removal from the org.
 
 ## Working with this repository
 
