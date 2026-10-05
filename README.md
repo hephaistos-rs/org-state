@@ -1,4 +1,5 @@
 # org-state
+**The org's GitHub repos, declared in OpenTofu**
 
 Infrastructure-as-code definition of the `hephaistos-rs` GitHub organization's
 repositories, using [OpenTofu](https://opentofu.org/) and the
