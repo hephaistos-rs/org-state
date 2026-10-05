@@ -9,7 +9,7 @@ import {
 
 resource "github_repository" "lemnos" {
   name        = "lemnos"
-  description = ""
+  description = "Forge your own cloud."
   visibility  = "public"
 
   topics = []

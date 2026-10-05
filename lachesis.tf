@@ -9,7 +9,7 @@ import {
 
 resource "github_repository" "lachesis" {
   name        = "lachesis"
-  description = ""
+  description = "Self-hosted CI, measuring each build stage"
   visibility  = "public"
 
   topics = []

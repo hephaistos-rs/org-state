@@ -9,7 +9,7 @@ import {
 
 resource "github_repository" "klotho" {
   name        = "klotho"
-  description = ""
+  description = "Self-hosted git, where code is spun"
   visibility  = "public"
 
   topics = []

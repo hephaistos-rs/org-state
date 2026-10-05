@@ -9,7 +9,7 @@ import {
 
 resource "github_repository" "atropos" {
   name        = "atropos"
-  description = ""
+  description = "Cut a release, host it yourself"
   visibility  = "public"
 
   topics = []

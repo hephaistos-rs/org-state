@@ -9,7 +9,7 @@ import {
 
 resource "github_repository" "kedalion" {
   name        = "kedalion"
-  description = ""
+  description = "Hyper-V host agent that guides Lemnos"
   visibility  = "public"
 
   topics = []

@@ -12,7 +12,7 @@ import {
 
 resource "github_repository" "dot_github" {
   name        = ".github"
-  description = ""
+  description = "Hephaistos-rs org profile and shared files"
   visibility  = "public"
 
   topics = []
