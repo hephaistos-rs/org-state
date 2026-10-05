@@ -10,7 +10,7 @@
 
 terraform {
   backend "s3" {
-    bucket       = "hephaistos-rs-org-state"
+    bucket       = "hephaistos-tofu-state"
     key          = "org-state.tfstate"
     region       = "auto"
     use_lockfile = true

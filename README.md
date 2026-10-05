@@ -269,7 +269,7 @@ repository), not just the summary line.
 
 ### State
 
-State lives in the `hephaistos-rs-org-state` R2 bucket (`backend.tf`),
+State lives in the `hephaistos-tofu-state` R2 bucket (`backend.tf`),
 encrypted with OpenTofu's built-in AES-GCM encryption (`encryption.tf`), with
 OpenTofu's S3 lock file, so CI applies remember what they created: adding a
 new repository is a single PR, with no `import` block. The `import` blocks
