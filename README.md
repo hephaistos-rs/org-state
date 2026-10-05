@@ -48,6 +48,7 @@ org-state/
 ├── .github/workflows/plan.yml   # PR checks: allowlist, fmt/validate, plan
 ├── .github/workflows/apply.yml  # applies main to GitHub after every merge
 ├── backend.tf                    # remote state in Cloudflare R2
+├── encryption.tf                 # state and plan encryption (passphrase from env)
 ├── members.tf                    # org members and their roles
 ├── teams.tf                      # teams, team members, team repository access
 ├── scripts/check-allowlist.sh    # rejects resource types this repo doesn't manage
@@ -146,8 +147,9 @@ For local development, having `gh` installed and authenticated
 (`gh auth login`, with at least the `repo` scope so private repositories
 can be read if any are added) is enough — nothing else to configure.
 
-Locally you also need R2 credentials for the state backend; see
-`backend.tf` for the three environment variables.
+Locally you also need R2 credentials for the state backend (see
+`backend.tf` for the three environment variables) and the state
+passphrase in `TF_VAR_state_passphrase` (see `encryption.tf`).
 
 In CI, the `fmt`/`validate` job needs no credentials at all. The others use
 these secrets (none of them can be the Actions-provided
@@ -156,6 +158,7 @@ these secrets (none of them can be the Actions-provided
 | Secret | Where | What |
 |---|---|---|
 | `GH_READ_TOKEN` | repo | fine-grained PAT, all org repos: Administration **read**, Metadata read; org: Members **read** |
+| `TOFU_STATE_PASSPHRASE` | repo | state and plan encryption passphrase, 16+ characters; keep a copy in a password manager |
 | `R2_ENDPOINT` | repo | `https://<account-id>.r2.cloudflarestorage.com` |
 | `R2_READ_ACCESS_KEY_ID`, `R2_READ_SECRET_ACCESS_KEY` | repo | R2 token, **Object Read** on the state bucket |
 | `GH_APPLY_TOKEN` | `apply` environment | fine-grained PAT, all org repos: Administration **read & write**, Metadata read; org: Members **read & write** |
@@ -266,11 +269,20 @@ repository), not just the summary line.
 
 ### State
 
-State lives in the `hephaistos-rs-org-state` R2 bucket (`backend.tf`), with
+State lives in the `hephaistos-rs-org-state` R2 bucket (`backend.tf`),
+encrypted with OpenTofu's built-in AES-GCM encryption (`encryption.tf`), with
 OpenTofu's S3 lock file, so CI applies remember what they created: adding a
 new repository is a single PR, with no `import` block. The `import` blocks
 already in the files are left in place; once a resource is in state,
 they're no-ops.
+
+Encryption is enforced: OpenTofu refuses to write state or a saved plan
+unencrypted, and without the passphrase it can't read either. The
+passphrase is a repo secret because PR plans read the state too, so
+encryption protects the state at rest in R2, not from someone who can
+already run this repo's workflows. If the passphrase is lost, the state is
+gone; repositories and memberships can be re-imported by name, rulesets by
+their ID (`gh api repos/hephaistos-rs/<repo>/rulesets`).
 
 ## Roadmap
 

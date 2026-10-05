@@ -33,9 +33,17 @@ fi
 
 fail=0
 
+# Prints "<keyword> <first label>" for a block header line.
+header() {
+  sed -E 's/^[[:space:]]*([a-z_]+)[[:space:]]*"?([A-Za-z0-9_-]*)"?.*/\1 \2/' <<<"$1"
+}
+
 # OpenTofu loads *.tf, *.tofu and their .json forms, plus override files.
 # Only plain .tf and .tofu are scanned below; anything else is refused.
-odd=( *.tf.json *.tofu.json *_override.tf *_override.tofu override.tf* override.tofu* )
+odd=()
+for f in *.tf.json *.tofu.json *_override.tf *_override.tofu override.tf override.tofu; do
+  if [ -e "$f" ]; then odd+=("$f"); fi
+done
 if [ ${#odd[@]} -gt 0 ]; then
   echo "::error::JSON and override files aren't allowed; they would bypass this check: ${odd[*]}"
   fail=1
@@ -43,8 +51,7 @@ fi
 
 for f in *.tf *.tofu; do
   while IFS= read -r line; do
-    kind=$(sed -E 's/^[[:space:]]*([a-z]+).*/\1/' <<<"$line")
-    type=$(sed -E 's/^[[:space:]]*[a-z]+[[:space:]]*"?([A-Za-z0-9_-]*)"?.*/\1/' <<<"$line")
+    read -r kind type <<<"$(header "$line")"
     case "$kind" in
       resource) [[ "$type" =~ ^($allowed_resources)$ ]] && continue ;;
       provider) [ "$type" = github ] && continue ;;
@@ -52,6 +59,17 @@ for f in *.tf *.tofu; do
     echo "::error file=$f::not allowed: $kind \"$type\""
     fail=1
   done < <(grep -E '^[[:space:]]*(resource|data|ephemeral|module|provider|provisioner|connection)([[:space:]]|"|\{|$)' "$f" || true)
+
+  # State encryption: only the passphrase key provider and AES-GCM. Others,
+  # such as the `external` key provider, run commands with CI's secrets.
+  while IFS= read -r line; do
+    read -r kind type <<<"$(header "$line")"
+    case "$kind:$type" in
+      key_provider:pbkdf2 | method:aes_gcm) continue ;;
+    esac
+    echo "::error file=$f::not allowed: $kind \"$type\""
+    fail=1
+  done < <(grep -E '^[[:space:]]*(key_provider|method)[[:space:]]*"' "$f" || true)
 done
 
 exit "$fail"
