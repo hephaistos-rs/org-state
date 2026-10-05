@@ -12,7 +12,7 @@ resource "github_repository" "atropos" {
   description = "Cut a release, host it yourself"
   visibility  = "public"
 
-  topics = []
+  topics = ["hephaistos-rs"]
 
   has_issues      = true
   has_projects    = true

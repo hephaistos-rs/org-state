@@ -12,7 +12,7 @@ resource "github_repository" "lemnos" {
   description = "Forge your own cloud."
   visibility  = "public"
 
-  topics = []
+  topics = ["hephaistos-rs"]
 
   has_issues      = true
   has_projects    = true

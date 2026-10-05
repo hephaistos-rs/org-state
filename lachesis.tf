@@ -12,7 +12,7 @@ resource "github_repository" "lachesis" {
   description = "Self-hosted CI, measuring each build stage"
   visibility  = "public"
 
-  topics = []
+  topics = ["hephaistos-rs"]
 
   has_issues      = true
   has_projects    = true

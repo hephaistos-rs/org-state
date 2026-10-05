@@ -12,7 +12,7 @@ resource "github_repository" "kedalion" {
   description = "Hyper-V host agent that guides Lemnos"
   visibility  = "public"
 
-  topics = []
+  topics = ["hephaistos-rs"]
 
   has_issues      = true
   has_projects    = true

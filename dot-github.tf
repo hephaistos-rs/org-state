@@ -15,7 +15,7 @@ resource "github_repository" "dot_github" {
   description = "Hephaistos-rs org profile and shared files"
   visibility  = "public"
 
-  topics = []
+  topics = [] # not a product: no hephaistos-rs topic (see AGENTS.md "Topics convention")
 
   has_issues      = true
   has_projects    = true
