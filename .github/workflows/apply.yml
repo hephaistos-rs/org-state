@@ -54,6 +54,11 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Plan allowlist
+        # Checks the saved plan itself, so nothing outside the allowlist is
+        # applied even if the source check above were somehow fooled.
+        run: bash scripts/check-allowlist.sh main.tfplan
+
       - name: tofu apply
         # Applies exactly the saved plan above, nothing re-planned.
         run: tofu apply -no-color -input=false main.tfplan
