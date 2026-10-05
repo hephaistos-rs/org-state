@@ -33,6 +33,13 @@ fi
 
 fail=0
 
+# The file's text with block comments removed, so a header can't hide
+# behind one (`/* x */ resource ...`). Everything up to a `*/` on a line is
+# dropped too, which only ever exposes more to the checks below.
+code() {
+  sed -E -e 's#/\*([^*]|\*+[^*/])*\*+/##g' -e 's#^.*\*/##' "$1"
+}
+
 # Prints "<keyword> <first label>" for a block header line.
 header() {
   sed -E 's/^[[:space:]]*([a-z_]+)[[:space:]]*"?([A-Za-z0-9_-]*)"?.*/\1 \2/' <<<"$1"
@@ -58,18 +65,36 @@ for f in *.tf *.tofu; do
     esac
     echo "::error file=$f::not allowed: $kind \"$type\""
     fail=1
-  done < <(grep -E '^[[:space:]]*(resource|data|ephemeral|module|provider|provisioner|connection)([[:space:]]|"|\{|$)' "$f" || true)
+  done < <(grep -E '^[[:space:]]*(resource|data|ephemeral|module|provider|provisioner|connection)([[:space:]]|"|\{|$)' <(code "$f") || true)
 
   # State encryption: only the passphrase key provider and AES-GCM. Others,
   # such as the `external` key provider, run commands with CI's secrets.
+  # Labels may be quoted or bare, so match the keyword itself; an
+  # attribute like `method = ...` is skipped, anything else unrecognised
+  # fails.
   while IFS= read -r line; do
+    [[ "$line" =~ ^[[:space:]]*(key_provider|method)[[:space:]]*= ]] && continue
     read -r kind type <<<"$(header "$line")"
     case "$kind:$type" in
       key_provider:pbkdf2 | method:aes_gcm) continue ;;
     esac
     echo "::error file=$f::not allowed: $kind \"$type\""
     fail=1
-  done < <(grep -E '^[[:space:]]*(key_provider|method)[[:space:]]*"' "$f" || true)
+  done < <(grep -E '^[[:space:]]*(key_provider|method)([[:space:]]|"|\{|=|$)' <(code "$f") || true)
+
+  # Encryption is configured in encryption.tf only.
+  if [ "$f" != encryption.tf ] && grep -qE '^[[:space:]]*encryption([[:space:]]|\{|$)' <(code "$f"); then
+    echo "::error file=$f::encryption blocks belong in encryption.tf only"
+    fail=1
+  fi
 done
+
+# encryption.tf is pinned: changing it means updating this hash in the same
+# PR, a deliberate, visible change. (CRs are stripped for Windows checkouts.)
+encryption_sha256='d55c4029774273bb579523187005c58ec7d6213b8f882d79c137a428601635eb'
+if [ "$(tr -d '\r' < encryption.tf | sha256sum | cut -d' ' -f1)" != "$encryption_sha256" ]; then
+  echo "::error file=encryption.tf::encryption.tf changed; review it, then update encryption_sha256 in $0"
+  fail=1
+fi
 
 exit "$fail"

@@ -23,7 +23,9 @@ real, public infrastructure other people depend on. Treat it accordingly.
    default.
 3. **State lives in R2, encrypted, and must never be committed.** Never
    weaken `encryption.tf` (`enforced = false`, a `fallback` block, another
-   key provider) or print the passphrase. `.gitignore`
+   key provider) or print the passphrase. `encryption.tf` is pinned by
+   hash in `scripts/check-allowlist.sh`; a human-requested change to it
+   must update `encryption_sha256` in the same PR. `.gitignore`
    already covers `*.tfstate`, `*.tfstate.*`, and `*.plan`/`*.tfplan`. If a
    git status shows one of these staged, stop and figure out why before
    committing.
