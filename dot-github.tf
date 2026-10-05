@@ -55,3 +55,24 @@ resource "github_branch_default" "dot_github" {
   repository = github_repository.dot_github.name
   branch     = "main"
 }
+
+# No pull-request rule here: .github's update-projects workflow commits the
+# profile README straight to main, which a PR requirement would block.
+resource "github_repository_ruleset" "dot_github_default_branch" {
+  name        = "default-branch"
+  repository  = github_repository.dot_github.name
+  target      = "branch"
+  enforcement = "active"
+
+  conditions {
+    ref_name {
+      include = ["~DEFAULT_BRANCH"]
+      exclude = []
+    }
+  }
+
+  rules {
+    deletion         = true
+    non_fast_forward = true
+  }
+}

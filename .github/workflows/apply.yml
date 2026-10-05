@@ -1,0 +1,59 @@
+name: IaC apply
+
+# Applies main to GitHub after every merge. The ruleset in org-state.tf
+# makes a reviewed PR with passing checks the only way onto main, and this
+# job's write credentials are secrets of the `apply` environment, which only
+# main can deploy to.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  # Queue applies; never cancel one halfway through.
+  group: iac-apply
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    name: apply
+    runs-on: ubuntu-latest
+    environment: apply
+    env:
+      GITHUB_TOKEN: ${{ secrets.GH_APPLY_TOKEN }}
+      AWS_ENDPOINT_URL_S3: ${{ secrets.R2_ENDPOINT }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.R2_WRITE_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_WRITE_SECRET_ACCESS_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up OpenTofu
+        uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
+        with:
+          tofu_version: "1.12.6"
+          tofu_wrapper: false
+
+      - name: Resource allowlist
+        run: bash scripts/check-allowlist.sh
+
+      - name: tofu init
+        run: tofu init -input=false
+
+      - name: tofu plan
+        run: |
+          tofu plan -no-color -input=false -out=main.tfplan | tee plan.txt
+          {
+            echo "### Applied plan"
+            echo '```'
+            cat plan.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: tofu apply
+        # Applies exactly the saved plan above, nothing re-planned.
+        run: tofu apply -no-color -input=false main.tfplan

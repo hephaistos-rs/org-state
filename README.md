@@ -23,12 +23,17 @@ Currently, per-repository configuration:
   branch deletion and update-branch suggestions)
 - lifecycle (archived state, and what happens if a resource is ever
   destroyed)
+- a `default-branch` ruleset per repository: nobody pushes to the default
+  branch directly, and others' PRs need an org owner's approval (see
+  "Branch protection" below)
+- `org-state`'s own `apply` environment, which holds CI's write credentials
 
 ## What this does not manage
 
-Out of scope for now: organization-wide permissions, team membership,
-billing, GitHub Apps/installations, branch protection rules/rulesets, and
-general org governance. None of these are needed for the current goal
+Out of scope for now: organization-wide permissions and settings, team
+membership, collaborators, billing, GitHub Apps/installations, and general
+org governance. CI enforces this: `scripts/check-allowlist.sh` rejects any
+resource type outside the ones listed above. None of these are needed for the current goal
 (reproducible repository metadata), and adding them isn't planned unless a
 real need shows up.
 
@@ -36,7 +41,11 @@ real need shows up.
 
 ```text
 org-state/
-├── .github/workflows/plan.yml   # fmt/validate/plan CI (see below) — no apply yet
+├── .github/CODEOWNERS            # every change needs an org owner's review
+├── .github/workflows/plan.yml   # PR checks: allowlist, fmt/validate, plan
+├── .github/workflows/apply.yml  # applies main to GitHub after every merge
+├── backend.tf                    # remote state in Cloudflare R2
+├── scripts/check-allowlist.sh    # rejects resource types this repo doesn't manage
 ├── atropos.tf                    # desired state of hephaistos-rs/atropos
 ├── dot-github.tf                 # desired state of hephaistos-rs/.github (see below for the name)
 ├── kedalion.tf                   # desired state of hephaistos-rs/kedalion
@@ -132,49 +141,59 @@ For local development, having `gh` installed and authenticated
 (`gh auth login`, with at least the `repo` scope so private repositories
 can be read if any are added) is enough — nothing else to configure.
 
-In CI, the `fmt`/`validate` job needs no credentials at all. The `plan` job
-needs a maintainer to add a repo secret named `GH_READ_TOKEN` — a
-fine-grained PAT or GitHub App installation token scoped to read the org's
-repositories — before it can produce real plan output. See the comment in
-`.github/workflows/plan.yml` for why this is a separate secret and not the
-Actions-provided `secrets.GITHUB_TOKEN`.
+Locally you also need R2 credentials for the state backend; see
+`backend.tf` for the three environment variables.
 
-### What CI can and can't do with local-only state
+In CI, the `fmt`/`validate` job needs no credentials at all. The others use
+these secrets (none of them can be the Actions-provided
+`secrets.GITHUB_TOKEN`, which only reaches this one repository):
 
-CI's `plan` job runs in a fresh runner every time, with no state file of its
-own and no access to whatever state file happens to be on a maintainer's
-laptop — state is never uploaded to, or read from, GitHub Actions. This
-still produces a **real, meaningful plan**: every resource here has a
-stable, human-chosen import ID (the repository name), so each `import`
-block can be re-resolved against live GitHub on every run, with no state to
-carry over. CI's plan is therefore always a comparison of the root-level
-`.tf` files against actual current GitHub — exactly as trustworthy as a
-local plan, just computed independently each time rather than reused.
+| Secret | Where | What |
+|---|---|---|
+| `GH_READ_TOKEN` | repo | fine-grained PAT, all org repos: Administration **read**, Metadata read |
+| `R2_ENDPOINT` | repo | `https://<account-id>.r2.cloudflarestorage.com` |
+| `R2_READ_ACCESS_KEY_ID`, `R2_READ_SECRET_ACCESS_KEY` | repo | R2 token, **Object Read** on the state bucket |
+| `GH_APPLY_TOKEN` | `apply` environment | fine-grained PAT, all org repos: Administration **read & write**, Metadata read |
+| `R2_WRITE_ACCESS_KEY_ID`, `R2_WRITE_SECRET_ACCESS_KEY` | `apply` environment | R2 token, **Object Read & Write** on the state bucket |
 
-What this arrangement genuinely can't do — the actual limitation, not just
-"no state file" — is provide locking or any cross-run coordination: nothing
-stops two `tofu apply` runs (from two laptops, or a laptop and a future CI
-apply job) from racing. That's fine while there's a single operator; it's
-the reason a shared backend becomes necessary once collaboration starts,
-not before. There is deliberately no automated `apply` job yet, and none of
-this should be read as CI having, or needing, "the same state" a human
-happens to have locally — that assumption doesn't hold here, by design.
+Neither PAT gets any organization permissions, so no configuration, however
+it's edited, can change org owners or members. The write credentials are
+environment secrets, and only `main` can deploy to the `apply` environment,
+so a PR branch can't reach them even by editing a workflow.
+
+### Branch protection
+
+Every repository has a `default-branch` ruleset:
+
+- nobody, org owners included, can push to the default branch directly,
+  force-push it, or delete it;
+- changes arrive by pull request, and need one approval (on `org-state`, a
+  code owner's: see `.github/CODEOWNERS`);
+- org owners can merge their own PRs without that approval (nobody can
+  approve their own PR), but only through a PR, never by pushing.
+
+On `org-state`, both CI checks must also pass, and only runs of the GitHub
+Actions app count (`integration_id = 15368`). `.github` is the exception:
+its ruleset only blocks force-pushes and deletion, because its
+`update-projects` workflow commits the profile README straight to `main`.
 
 ## Working with this repository
 
 ```bash
-tofu init      # download the provider
-tofu fmt       # format .tf files
-tofu validate  # check syntax/internal consistency
-tofu plan      # show what would change, without changing anything
-tofu apply     # apply an approved plan
+tofu init             # download the provider, connect to the R2 state
+tofu fmt              # format .tf files
+tofu validate         # check syntax/internal consistency
+tofu plan -lock=false # show what would change, without changing anything
 ```
 
-Changes should normally go through a pull request: open a PR editing the
-relevant repository's `.tf` file, let CI post the plan, get it reviewed,
-then merge. There is currently no automated `apply` step (see "Roadmap")
-— applying a change is a manual, deliberate action by whoever is maintaining
-this repository, run locally with `tofu apply` after reviewing the plan.
+Every change goes through a pull request: edit the relevant repository's
+`.tf` file, open a PR, and CI posts the plan as a comment. Review that
+plan; merging is approving it. On merge, `apply.yml` plans `main` again and
+applies that saved plan, with the plan in the run summary. Applies queue
+behind each other and never cancel, and the R2 lock file stops a local
+`tofu apply` from racing one.
+
+Don't `tofu apply` locally except to recover from a broken CI apply.
 
 ## Lifecycle safety policy
 
@@ -226,30 +245,23 @@ repository), not just the summary line.
 
 ### State
 
-OpenTofu state is currently stored **locally** (`terraform.tfstate`), as a
-temporary bootstrap arrangement — there is one operator, so there is
-nothing to coordinate. The state file is intentionally excluded from
-version control (`.gitignore` covers `*.tfstate` and `*.tfstate.*`) and is
-never pushed to GitHub. A shared remote backend will be introduced when
-collaborative operation actually requires it — see "Roadmap." A local
-state file now exists on whichever machine last ran `tofu apply`; anyone
-else (or CI) has none, and will re-import every repository from live
-GitHub the next time they run `tofu plan`/`tofu apply` — expected and fine
-(see "What CI can and can't do with local-only state" above).
+State lives in the `hephaistos-rs-org-state` R2 bucket (`backend.tf`), with
+OpenTofu's S3 lock file, so CI applies remember what they created: adding a
+new repository is a single PR, with no `import` block. The `import` blocks
+already in the files are left in place; once a resource is in state,
+they're no-ops.
 
 ## Roadmap
 
 Not part of this initial setup, deliberately deferred until there's a real
 need:
 
-1. **Shared/remote state** — once more than one person operates this repo,
-   introduce a backend with locking so concurrent `apply` runs can't race.
-   Which backend is a decision for that point, not this one.
-2. **Controlled apply** — a CI job that applies an approved plan on merge to
-   `main`, gated by required reviewers.
-3. **Drift detection** — a scheduled `tofu plan -detailed-exitcode` that
+Done since the initial setup: remote state (R2) and apply on merge to
+`main`, gated by rulesets.
+
+1. **Drift detection** — a scheduled `tofu plan -detailed-exitcode` that
    opens an issue on drift instead of applying automatically.
-4. **Broader repository settings** as real needs come up (e.g. GitHub Pages
+2. **Broader repository settings** as real needs come up (e.g. GitHub Pages
    configuration, security-and-analysis toggles) — not added speculatively.
 
 ## Known issues found during setup

@@ -10,9 +10,10 @@ real, public infrastructure other people depend on. Treat it accordingly.
 
 ## Non-negotiable rules
 
-1. **Never run `tofu apply` without showing the plan output first and
-   getting it reviewed.** A clean plan you generated yourself is not a
-   substitute for review — paste it, don't summarize it.
+1. **Never run `tofu apply` yourself.** Merging to `main` applies: CI's
+   `apply.yml` runs on every merge. Your job ends at a PR whose plan comment
+   a human reviews. A local apply is only for recovering from a broken CI
+   apply, and only when a human asks, after showing them the full plan.
 2. **Never guess a value.** Before writing or editing any attribute in a
    `.tf` file, read the repository's actual current setting:
    ```bash
@@ -20,7 +21,7 @@ real, public infrastructure other people depend on. Treat it accordingly.
    ```
    If you can't verify a value, say so — don't fill it in with a plausible
    default.
-3. **State is local-only and must never be committed.** `.gitignore`
+3. **State lives in R2 and must never be committed.** `.gitignore`
    already covers `*.tfstate`, `*.tfstate.*`, and `*.plan`/`*.tfplan`. If a
    git status shows one of these staged, stop and figure out why before
    committing.
@@ -62,7 +63,8 @@ For any edit to a `.tf` file:
 ```bash
 tofu fmt -recursive       # formatting only, no semantic effect
 tofu validate              # syntax + internal consistency
-tofu plan                  # compare declared config against live GitHub
+bash scripts/check-allowlist.sh  # same check CI runs first
+tofu plan -lock=false      # compare declared config against live GitHub
 ```
 
 Read the full plan output, not just the summary line. Two kinds of "change"
@@ -77,9 +79,8 @@ show up and they mean very different things:
   OpenTofu itself remembers. Safe to apply on sight, but still worth
   knowing which is which rather than assuming.
 
-Only apply a plan you generated and reviewed in the same sitting
-(`tofu apply <planfile>` against a saved plan, not a fresh unreviewed
-`tofu apply`), so what gets applied is exactly what was reviewed.
+CI applies a saved plan (`tofu apply <planfile>`), so what gets applied is
+exactly what its run summary shows.
 
 ## Adding a new repository
 
@@ -135,9 +136,12 @@ which category it's in rather than copying topics from the nearest example.
 
 ## Out of scope
 
-Don't add configuration for: teams, org-wide permissions, branch protection
-rules/rulesets, GitHub Apps/installations, billing, or general org
-governance. This repo manages repository-level metadata only. If a real
+Don't add configuration for: teams, collaborators, org-wide permissions or
+settings, GitHub Apps/installations, billing, or general org governance.
+This repo manages repository metadata, each repository's `default-branch`
+ruleset, and org-state's own `apply` environment. `scripts/check-allowlist.sh`
+enforces this, and widening its allowlist is a human decision, made in its
+own PR. If a real
 need for one of these comes up, that's a decision for a human to make
 explicitly — not something to add speculatively while working on something
 else.

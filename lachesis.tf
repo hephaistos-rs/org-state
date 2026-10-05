@@ -52,3 +52,36 @@ resource "github_branch_default" "lachesis" {
   repository = github_repository.lachesis.name
   branch     = "main"
 }
+
+resource "github_repository_ruleset" "lachesis_default_branch" {
+  name        = "default-branch"
+  repository  = github_repository.lachesis.name
+  target      = "branch"
+  enforcement = "active"
+
+  conditions {
+    ref_name {
+      include = ["~DEFAULT_BRANCH"]
+      exclude = []
+    }
+  }
+
+  # Org owners may merge a PR without an approval (nobody can approve their
+  # own PR), but nobody, owners included, can push to the branch directly.
+  bypass_actors {
+    actor_type  = "OrganizationAdmin"
+    actor_id    = 1
+    bypass_mode = "pull_request"
+  }
+
+  rules {
+    deletion         = true
+    non_fast_forward = true
+    pull_request {
+      required_approving_review_count = 1
+      require_code_owner_review       = false
+      dismiss_stale_reviews_on_push   = true
+      require_last_push_approval      = true
+    }
+  }
+}

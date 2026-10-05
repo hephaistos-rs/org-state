@@ -1,17 +1,15 @@
 name: IaC validate & plan
 
-# Initial CI for org-state. This is deliberately minimal:
+# PR checks for org-state. Both jobs are required by the default-branch
+# ruleset (org-state.tf), and merging to main applies (apply.yml), so:
 #   - fmt/validate always runs, needs no credentials, safe on forked PRs.
-#   - plan runs only for non-fork PRs, using a read-scoped credential.
-#   - there is no apply job yet. Applying changes is a later phase, once
-#     this repo has a real reviewed track record and a remote state backend.
-#     See README.md "Roadmap".
+#   - plan runs only for non-fork PRs, using read-only credentials, and
+#     never takes the state lock.
+#   - there is no paths filter: required checks must report on every PR,
+#     or PRs that don't touch .tf files could never merge.
 
 on:
   pull_request:
-    paths:
-      - "**/*.tf"
-      - ".github/workflows/plan.yml"
 
 permissions:
   contents: read
@@ -34,6 +32,9 @@ jobs:
         uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
         with:
           tofu_version: "1.12.6"
+
+      - name: Resource allowlist
+        run: bash scripts/check-allowlist.sh
 
       - name: tofu fmt -check
         run: tofu fmt -check -recursive -diff
@@ -64,7 +65,15 @@ jobs:
         with:
           tofu_version: "1.12.6"
 
+      - name: Resource allowlist
+        # Before init, so a rejected config never runs with credentials.
+        run: bash scripts/check-allowlist.sh
+
       - name: tofu init
+        env:
+          AWS_ENDPOINT_URL_S3: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_READ_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_READ_SECRET_ACCESS_KEY }}
         run: tofu init -input=false
 
       - name: tofu plan
@@ -80,9 +89,14 @@ jobs:
           # installation token limited to org repo metadata:read) before
           # this job produces real output. See README.md "Authentication".
           GITHUB_TOKEN: ${{ secrets.GH_READ_TOKEN }}
+          AWS_ENDPOINT_URL_S3: ${{ secrets.R2_ENDPOINT }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_READ_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_READ_SECRET_ACCESS_KEY }}
         run: |
           set +e
-          tofu plan -no-color -input=false -detailed-exitcode > plan.txt
+          # -lock=false: the read-only R2 token can't write a lock file, and
+          # a PR plan must never block an apply on main.
+          tofu plan -no-color -input=false -lock=false -detailed-exitcode > plan.txt
           echo "exitcode=$?" >> "$GITHUB_OUTPUT"
           cat plan.txt
 
