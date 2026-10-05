@@ -3,8 +3,8 @@ name: IaC validate & plan
 # PR checks for org-state. Both jobs are required by the default-branch
 # ruleset (org-state.tf), and merging to main applies (apply.yml), so:
 #   - fmt/validate always runs, needs no credentials, safe on forked PRs.
-#   - plan runs only for non-fork PRs, using read-only credentials, and
-#     never takes the state lock.
+#   - plan runs only for non-fork PRs, using the repo-level credentials,
+#     and never takes the state lock.
 #   - there is no paths filter: required checks must report on every PR,
 #     or PRs that don't touch .tf files could never merge.
 
@@ -96,8 +96,8 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_READ_SECRET_ACCESS_KEY }}
         run: |
           set +e
-          # -lock=false: the read-only R2 token can't write a lock file, and
-          # a PR plan must never block an apply on main.
+          # -lock=false: a PR plan only reads state, and must never take
+          # the lock and block an apply on main.
           tofu plan -no-color -input=false -lock=false -detailed-exitcode > plan.txt
           echo "exitcode=$?" >> "$GITHUB_OUTPUT"
           cat plan.txt

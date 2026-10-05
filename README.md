@@ -160,9 +160,13 @@ these secrets (none of them can be the Actions-provided
 | `GH_READ_TOKEN` | repo | fine-grained PAT, all org repos: Administration **read**, Metadata read; org: Members **read** |
 | `TOFU_STATE_PASSPHRASE` | repo | state and plan encryption passphrase, 16+ characters; keep a copy in a password manager |
 | `R2_ENDPOINT` | repo | `https://<account-id>.r2.cloudflarestorage.com` |
-| `R2_READ_ACCESS_KEY_ID`, `R2_READ_SECRET_ACCESS_KEY` | repo | R2 token, **Object Read** on the state bucket |
+| `R2_READ_ACCESS_KEY_ID`, `R2_READ_SECRET_ACCESS_KEY` | repo | R2 token for the state bucket (currently the same read & write token as below) |
 | `GH_APPLY_TOKEN` | `apply` environment | fine-grained PAT, all org repos: Administration **read & write**, Metadata read; org: Members **read & write** |
 | `R2_WRITE_ACCESS_KEY_ID`, `R2_WRITE_SECRET_ACCESS_KEY` | `apply` environment | R2 token, **Object Read & Write** on the state bucket |
+
+Both R2 pairs currently hold the same token, so PR plan jobs can also
+write to the state bucket. Swapping the repo-level pair for an Object
+Read-only token tightens that without any code change.
 
 The apply token can change who has access, org owners included, so the
 review on every PR is what decides access (see "People and access"). The
