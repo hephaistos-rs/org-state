@@ -2,11 +2,6 @@
 #
 # Imported, not created: values were read from the live repository.
 
-import {
-  to = github_repository.klotho
-  id = "klotho"
-}
-
 resource "github_repository" "klotho" {
   name        = "klotho"
   description = "Self-hosted git, where code is spun"
@@ -41,11 +36,6 @@ resource "github_repository" "klotho" {
   lifecycle {
     prevent_destroy = true # see README.md "Lifecycle safety policy" before removing
   }
-}
-
-import {
-  to = github_branch_default.klotho
-  id = "klotho"
 }
 
 resource "github_branch_default" "klotho" {

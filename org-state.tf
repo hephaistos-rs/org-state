@@ -14,11 +14,6 @@
 # "Projects" showcase of software products. org-state is infrastructure
 # configuration, not a product.
 
-import {
-  to = github_repository.org_state
-  id = "org-state"
-}
-
 resource "github_repository" "org_state" {
   name        = "org-state"
   description = "Infrastructure as code for the hephaistos-rs GitHub organization's repositories (OpenTofu)."
@@ -53,11 +48,6 @@ resource "github_repository" "org_state" {
   lifecycle {
     prevent_destroy = true # see README.md "Lifecycle safety policy"
   }
-}
-
-import {
-  to = github_branch_default.org_state
-  id = "org-state"
 }
 
 resource "github_branch_default" "org_state" {
