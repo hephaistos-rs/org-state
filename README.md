@@ -91,9 +91,9 @@ Every repository in the organization is managed by this repository:
 `org-state`. (`edda` and `terra`, the first two repositories adopted here,
 have since been deleted from GitHub and their files removed.) All of them
 except `org-state` already existed on GitHub before being added here.
-They were **imported**, not created: each file starts with an `import`
-block that brought the existing repository into OpenTofu's state without
-creating or deleting it. Every attribute value was captured from the
+They were **imported**, not created: an `import` block per resource brought
+the existing repository into OpenTofu's state without creating or deleting
+it. Those blocks have been removed now that the state lives in R2. Every attribute value was captured from the
 repositories' actual live GitHub settings (via an authenticated read), not
 guessed or copied from a template — with one deliberate, explicitly
 requested exception: see "Known issues found during setup."
@@ -276,9 +276,10 @@ repository), not just the summary line.
 State lives in the `hephaistos-tofu-state` R2 bucket (`backend.tf`),
 encrypted with OpenTofu's built-in AES-GCM encryption (`encryption.tf`), with
 OpenTofu's S3 lock file, so CI applies remember what they created: adding a
-new repository is a single PR, with no `import` block. The `import` blocks
-already in the files are left in place; once a resource is in state,
-they're no-ops.
+new repository is a single PR, with no `import` block. The one-time `import` blocks
+have been removed: CI's first apply imported everything into the remote
+state. To adopt another existing repository, add `import` blocks to its
+file again (see AGENTS.md) and drop them after the apply.
 
 Encryption is enforced: OpenTofu refuses to write state or a saved plan
 unencrypted, and without the passphrase it can't read either. The

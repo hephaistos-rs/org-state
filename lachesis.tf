@@ -2,11 +2,6 @@
 #
 # Imported, not created: values were read from the live repository.
 
-import {
-  to = github_repository.lachesis
-  id = "lachesis"
-}
-
 resource "github_repository" "lachesis" {
   name        = "lachesis"
   description = "Self-hosted CI, measuring each build stage"
@@ -41,11 +36,6 @@ resource "github_repository" "lachesis" {
   lifecycle {
     prevent_destroy = true # see README.md "Lifecycle safety policy" before removing
   }
-}
-
-import {
-  to = github_branch_default.lachesis
-  id = "lachesis"
 }
 
 resource "github_branch_default" "lachesis" {

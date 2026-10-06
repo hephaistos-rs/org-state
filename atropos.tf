@@ -2,11 +2,6 @@
 #
 # Imported, not created: values were read from the live repository.
 
-import {
-  to = github_repository.atropos
-  id = "atropos"
-}
-
 resource "github_repository" "atropos" {
   name        = "atropos"
   description = "Cut a release, host it yourself"
@@ -41,11 +36,6 @@ resource "github_repository" "atropos" {
   lifecycle {
     prevent_destroy = true # see README.md "Lifecycle safety policy" before removing
   }
-}
-
-import {
-  to = github_branch_default.atropos
-  id = "atropos"
 }
 
 resource "github_branch_default" "atropos" {

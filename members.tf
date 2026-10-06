@@ -11,11 +11,6 @@
 #     role     = "member"
 #   }
 
-import {
-  to = github_membership.damianko135
-  id = "hephaistos-rs:Damianko135"
-}
-
 resource "github_membership" "damianko135" {
   username = "Damianko135"
   role     = "admin"

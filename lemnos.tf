@@ -2,11 +2,6 @@
 #
 # Imported, not created: values were read from the live repository.
 
-import {
-  to = github_repository.lemnos
-  id = "lemnos"
-}
-
 resource "github_repository" "lemnos" {
   name        = "lemnos"
   description = "Forge your own cloud."
@@ -41,11 +36,6 @@ resource "github_repository" "lemnos" {
   lifecycle {
     prevent_destroy = true # see README.md "Lifecycle safety policy" before removing
   }
-}
-
-import {
-  to = github_branch_default.lemnos
-  id = "lemnos"
 }
 
 resource "github_branch_default" "lemnos" {

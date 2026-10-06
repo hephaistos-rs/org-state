@@ -2,11 +2,6 @@
 #
 # Imported, not created: values were read from the live repository.
 
-import {
-  to = github_repository.kedalion
-  id = "kedalion"
-}
-
 resource "github_repository" "kedalion" {
   name        = "kedalion"
   description = "Hyper-V host agent that guides Lemnos"
@@ -41,11 +36,6 @@ resource "github_repository" "kedalion" {
   lifecycle {
     prevent_destroy = true # see README.md "Lifecycle safety policy" before removing
   }
-}
-
-import {
-  to = github_branch_default.kedalion
-  id = "kedalion"
 }
 
 resource "github_branch_default" "kedalion" {

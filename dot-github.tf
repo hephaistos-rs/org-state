@@ -5,11 +5,6 @@
 # The file is named dot-github.tf, not .github.tf: OpenTofu skips files
 # whose names start with a dot, so .github.tf would silently never load.
 
-import {
-  to = github_repository.dot_github
-  id = ".github"
-}
-
 resource "github_repository" "dot_github" {
   name        = ".github"
   description = "Hephaistos-rs org profile and shared files"
@@ -44,11 +39,6 @@ resource "github_repository" "dot_github" {
   lifecycle {
     prevent_destroy = true # see README.md "Lifecycle safety policy" before removing
   }
-}
-
-import {
-  to = github_branch_default.dot_github
-  id = ".github"
 }
 
 resource "github_branch_default" "dot_github" {
