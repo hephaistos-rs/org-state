@@ -24,12 +24,12 @@ Currently, per-repository configuration:
 - lifecycle (archived state, and what happens if a resource is ever
   destroyed)
 - a `default-branch` ruleset per repository: nobody pushes to the default
-  branch directly, and others' PRs need an org owner's approval (see
-  "Branch protection" below)
+  branch directly, and PRs need an approval once someone besides their
+  author could give one (see "Branch protection" below)
 - `org-state`'s own `apply` environment, which holds CI's write credentials
-- people: org members (`members.tf`), teams and their repository access
-  (`teams.tf`), and single-repository collaborators (in that repository's
-  file); see "People and access" below
+- people: org members and single-repository collaborators
+  (`members.tf`), and teams and their repository access (`teams.tf`); see
+  "People and access" below
 
 ## What this does not manage
 
@@ -44,13 +44,14 @@ real need shows up.
 
 ```text
 org-state/
-├── .github/CODEOWNERS            # every change needs an org owner's review
+├── .github/CODEOWNERS            # the maintainers team (teams.tf) owns everything
 ├── .github/workflows/plan.yml   # PR checks: allowlist, fmt/validate, plan
 ├── .github/workflows/apply.yml  # applies main to GitHub after every merge
 ├── backend.tf                    # remote state in Cloudflare R2
 ├── encryption.tf                 # state and plan encryption (passphrase from env)
 ├── members.tf                    # org members and their roles
 ├── teams.tf                      # teams, team members, team repository access
+├── reviewers.tf                  # approvals each repository's PRs need, from the above
 ├── scripts/check-allowlist.sh    # rejects resource types this repo doesn't manage
 ├── atropos.tf                    # desired state of hephaistos-rs/atropos
 ├── dot-github.tf                 # desired state of hephaistos-rs/.github (see below for the name)
@@ -179,10 +180,30 @@ Every repository has a `default-branch` ruleset:
 
 - nobody, org owners included, can push to the default branch directly,
   force-push it, or delete it;
-- changes arrive by pull request, and need one approval (on `org-state`, a
-  code owner's: see `.github/CODEOWNERS`);
-- org owners can merge their own PRs without that approval (nobody can
-  approve their own PR), but only through a PR, never by pushing.
+- changes arrive by pull request;
+- a PR needs one approval, a code owner's, once someone besides its
+  author could give it, and
+  none while only one person could. Nobody can approve their own PR, so
+  requiring one with a single reviewer would only mean bypassing it;
+- no ruleset has a bypass, so a required approval or check holds for
+  owners too.
+
+`reviewers.tf` works the count out from the people declared here. Only
+approvals from people with write access count, and the org's base
+permission is read, so that's org owners plus anyone granted push or more
+on the repository, directly or through a team. Plain members and Copilot
+don't count. If the base permission is ever raised to write, update
+`reviewers.tf` to count every member.
+
+The count changes when the PR adding someone merges, before they've
+accepted their invitation. Until they do, your PRs to the repositories they
+can review need an approval nobody can give yet, so have them accept
+promptly.
+
+Every repository's `.github/CODEOWNERS` names the `maintainers` team from
+`teams.tf`, and only a maintainer's approval counts. Someone who should
+review goes in that team. A second owner or a collaborator who isn't in it
+still makes PRs need an approval, and only a maintainer can give it.
 
 On `org-state`, both CI checks must also pass, and only runs of the GitHub
 Actions app count (`integration_id = 15368`). `.github` is the exception:
@@ -196,11 +217,11 @@ open a PR, merge, and CI applies it. Adding someone to `members.tf` sends
 an org invitation; they're a member once they accept.
 
 Admin grants go through PRs too, so review them as what they are. An org
-owner (`role = "admin"` in `members.tf`) gets the org-owner bypass on
-every ruleset: they can merge their own PRs without approval, and change
-or remove rulesets in the GitHub UI. Nothing in this repository can limit
-an org owner, so only make someone one if you'd trust them with the whole
-org.
+owner (`role = "admin"` in `members.tf`) can approve PRs on every
+repository, and can change or remove rulesets in the GitHub UI. Nothing in
+this repository can limit an org owner, so only make someone one if you'd
+trust them with the whole org. Changing a ruleset in the UI is also the
+way out if a required check ever breaks so that no PR can merge.
 
 The founding owner's own membership has `prevent_destroy`, so deleting it
 from `members.tf` gives a blocked plan, not a removal from the org.
