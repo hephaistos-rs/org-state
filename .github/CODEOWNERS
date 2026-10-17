@@ -1,2 +1,3 @@
-# Every change here is applied to the org on merge; it needs owner review.
-* @Damianko135
+# Every change here is applied to the org on merge; it needs a maintainer's
+# review. The team is declared in teams.tf.
+* @hephaistos-rs/maintainers

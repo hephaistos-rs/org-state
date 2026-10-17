@@ -56,20 +56,16 @@ resource "github_repository_ruleset" "klotho_default_branch" {
     }
   }
 
-  # Org owners may merge a PR without an approval (nobody can approve their
-  # own PR), but nobody, owners included, can push to the branch directly.
-  bypass_actors {
-    actor_type  = "OrganizationAdmin"
-    actor_id    = 1
-    bypass_mode = "pull_request"
-  }
+  # Nobody, owners included, can push to the branch directly. A PR needs
+  # an approval only when someone besides its author could give one: see
+  # reviewers.tf.
 
   rules {
     deletion         = true
     non_fast_forward = true
     pull_request {
-      required_approving_review_count = 1
-      require_code_owner_review       = false
+      required_approving_review_count = lookup(local.reviews, github_repository.klotho.name, local.owner_reviews)
+      require_code_owner_review       = lookup(local.reviews, github_repository.klotho.name, local.owner_reviews) > 0 # .github/CODEOWNERS: the maintainers team in teams.tf
       dismiss_stale_reviews_on_push   = true
       require_last_push_approval      = true
     }
