@@ -4,7 +4,7 @@
 
 resource "github_repository" "kedalion" {
   name        = "kedalion"
-  description = "Hyper-V host agent that guides Lemnos"
+  description = "Host agent that guides Lemnos"
   visibility  = "public"
 
   topics = ["hephaistos-rs"]
